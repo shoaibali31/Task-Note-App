@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./service-worker.js");
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/rs5C8Hs9/todolisticon.png">
+
+    <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+            outline: none;
+            margin-top: 0%;
+        }
+
+        body {
+            background-color: black;
+        }
+
+        html,
+        body {
+            overflow-x: hidden;
+            max-width: 100%;
+        }
+
+        .top_container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: antiquewhite;
+        }
+
+        .top_container h1 {
+            margin-bottom: 10px;
+        }
+
+        .input_group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .input_group input {
+            border-radius: 50px;
+            flex: 1;
+            min-width: 180px;
+            padding: 10px 15px;
+            background-color: white;
+            border: 2px solid white;
+            outline: none;
+            box-shadow: none !important;
+        }
+
+        .simple-btn {
+            background-color: transparent;
+            color: #40E0D0;
+            border: none;
+            font-size: 16px;
+            padding: 6px 10px;
+        }
+
+        .simple-btn:hover {
+            color: cornflowerblue;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            padding: 1px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: 0.2s ease;
+            margin-right: 8px;
+        }
+
+        .delete-btn svg {
+            width: 22px !important;
+            height: 22px !important;
+            margin-right: 8px;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            padding: 1px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: 0.2s ease;
+        }
+
+        .edit-btn svg {
+            width: 22px !important;
+            height: 22px !important;
+        }
+
+        .edit-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        /* Custom Turquoise Checkbox */
+        input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #40E0D0;
+            /* turquoise border */
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.2s ease;
+            margin-top: 7px;
+        }
+
+        /* When checked — fill with turquoise */
+        input[type="checkbox"]:checked {
+            background-color: #40E0D0;
+            border-color: #40E0D0;
+        }
+
+        /* Checkmark */
+        input[type="checkbox"]:checked::after {
+            content: "";
+            position: absolute;
+            left: 5px;
+            bottom: 4px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+
+        #remainingTasks h4,
+        #completedTasks h4 {
+            flex: 1;
+            word-wrap: break-word;
+            font-weight: 500;
+            color: white;
+            margin: 3px;
+            min-width: 0;
+        }
+
+        #remainingTasks>div,
+        #completedTasks>div {
+            display: flex;
+            align-items: flex-start !important;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            overflow: hidden;
+            margin-left: 0;
+            padding: 1px 1px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            box-sizing: border-box;
+            flex-wrap: nowrap;
+        }
+
+        .delete-btn,
+        .edit-btn,
+        .delete-btn svg,
+        .edit-btn svg {
+            flex-shrink: 0;
+        }
+
+        #remainingSection,
+        #completedSection {
+            width: 100%;
+            margin-left: 0;
+            padding: 0 15px;
+            margin-top: 20px;
+        }
+
+        .divider {
+            width: 80%;
+            border: none;
+            border-top: 1px solid #444;
+            margin: 1px auto;
+            /* spacing above and below */
+        }
+
+        .search_icon {
+            position: absolute;
+            right: 15px;
+            top: 13px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search_icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .search_icon:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .search_overlay {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            background: black;
+            padding: 15px;
+            display: none;
+            justify-content: center;
+            gap: 1px;
+            z-index: 20;
+            align-items: center;
+        }
+
+        .search_overlay input {
+            padding: 8px 14px;
+            font-size: 15px;
+            border-radius: 40px;
+            width: 75%;
+            background-color: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+
+        .search_overlay button {
+            background: none;
+            border: none;
+            color: #40E0D0;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search_overlay button svg {
+            width: 34px;
+            height: 34px;
+            margin-right: 25px;
+        }
+
+        /* Edit Mode Input Styling */
+        .todo-edit-input {
+            padding: 8px 14px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid #40E0D0;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+
+            box-shadow: 0 0 6px #40E0D0;
+            transition: 0.25s ease;
+        }
+
+        /* On focus (when typing) */
+        .todo-edit-input:focus {
+            background: rgba(0, 0, 0, 0.85);
+            border-color: #5ff5e5;
+            box-shadow: 0 0 10px #40E0D0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top_container">
+        <h1>TASKS</h1>
+
+        <div class="search_icon" onclick="toggleSearch()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#40E0D0" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </div>
+        <div class="search_overlay" id="searchOverlay">
+            <input type="text" id="searchInput" placeholder="Search tasks..." oninput="searchTasks()">
+
+            <button onclick="closeSearch()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#40E0D0" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+
+        <div class="input_group">
+<textarea placeholder=" 
+         Enter your Task..."
+          id="todoInput"
+          rows="2"
+
+          style="
+          display: flex;
+          border-radius: 12px;
+          background: white;
+          border: 2px solid white;
+          resize: none;
+          padding: 0px 0px 0px 70px;
+          ">
+</textarea>
+            <button class="simple-btn" onclick="addTodo()">Add</button>
+            <button class="simple-btn" onclick="clearTodos()">Clear All</button>
+        </div>
+    </div>
+    <hr class="divider">
+
+    <div id="remainingSection">
+<h4 style="color:white; display:flex; align-items:center; justify-content:space-between;">
+    <span>Tasks <span id="remainingTitleCount"></span></span>
+
+    <!-- Undo Button -->
+    <button id="undoBtn" onclick="undoDelete()" 
+        style="background:none; border:none; cursor:pointer; opacity:0.6; margin-right:5px; display:none;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="34" height="34"
+     fill="none" stroke="#40E0D0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+     <g transform="translate(-15, 0)">
+  <path d="
+      M170 95
+      C170 60, 170 60, 120 60
+      H50
+  " />
+  <polyline points="50,40 15,60 50,80" />
+</svg>
+    </button>
+</h4>
+
+        <div id="remainingTasks"></div>
+    </div>
+    <div id="completedSection">
+        <h4 style="color:white;">
+            Completed <span id="completedTitleCount"></span>
+        </h4>
+        <div id="completedTasks"></div>
+    </div>
+
+    <script>
+        let todos = [];
+        let lastDeleted = null;
+
+        window.onload = function () {
+            const savedTodos = localStorage.getItem("todos");
+            if (savedTodos) {
+                todos = JSON.parse(savedTodos);
+                render();
+            }
+        }
+        function saveTodos() {
+            localStorage.setItem("todos", JSON.stringify(todos));
+        }
+
+        function addTodo() {
+            const input = document.getElementById("todoInput");
+            const value = input.value.trim();
+            if (value !== "") {
+                todos.unshift({
+                    id: Date.now(),
+                    title: value,
+                    completed: false
+                });
+                input.value = "";
+                saveTodos();
+                render();
+            }
+        }
+
+function deleteTodo(index) {
+    lastDeleted = todos[index];   // save last deleted task
+    todos.splice(index, 1);
+    saveTodos();
+    render();
+
+    // Show undo button
+    document.getElementById("undoBtn").style.display = "inline-block";
+
+    // Auto-hide after 6 seconds
+    setTimeout(() => {
+        document.getElementById("undoBtn").style.display = "none";
+        lastDeleted = null;
+    }, 15000);
+}
+
+function undoDelete() {
+    if (!lastDeleted) return;
+
+    // Restore it at top
+    todos.unshift(lastDeleted);
+    lastDeleted = null;
+
+    saveTodos();
+    render();
+
+    // Hide undo button
+    document.getElementById("undoBtn").style.display = "none";
+}
+
+        function clearTodos() {
+            todos = [];
+            saveTodos();
+            render();
+        }
+
+        // This function toggles the completed state of a todo
+        function toggleComplete(index) {
+            todos[index].completed = !todos[index].completed; // Flip true/false
+            saveTodos();  // Save updated state
+            render();     // Re-render to update checkbox + styling
+        }
+
+        function createTodoComponent(todo, index) {
+            const div = document.createElement("div");
+            div.setAttribute("draggable", "true");
+            div.dataset.id = todo.id;
+            div.id = `todo-${todo.id}`;
+            div.addEventListener("dragstart", dragStart);
+            div.addEventListener("dragover", dragOver);
+            div.addEventListener("drop", dropItem);
+            div.addEventListener("dragend", dragEnd);
+
+            // Create checkbox for marking tasks complete
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";  // Make checkbox
+            checkbox.checked = todo.completed;// Make it match saved state
+            // Fade checkbox when completed
+            checkbox.style.opacity = todo.completed ? "0.5" : "1";
+            checkbox.onchange = () => toggleComplete(index);
+
+            const h4 = document.createElement("h4");
+
+            // LIMIT TO 100 WORDS
+            let fullText = todo.title;
+            let words = fullText.split(" ");
+            let shortText = words.length >= 15 ? words.slice(0, 15).join(" ") + "..." : fullText;
+
+            h4.innerHTML = shortText.replace(/\n/g, "<br>");
+            h4.dataset.full = fullText.replace(/\n/g, "<br>");
+            h4.dataset.short = shortText.replace(/\n/g, "<br>");
+            h4.dataset.expanded = "false";
+
+            // CLICK TO EXPAND/COLLAPSE
+            h4.onclick = () => {
+                if (h4.dataset.expanded === "false") {
+                    h4.innerHTML = h4.dataset.full.replace(/\n/g, "<br>");
+                    h4.dataset.expanded = "true";
+                } else {
+                    h4.innerHTML = h4.dataset.short.replace(/\n/g, "<br>");
+                    h4.dataset.expanded = "false";
+                }
+            };
+
+            // Style text based on completed state
+            h4.style.textDecoration = "none";
+            h4.style.opacity = todo.completed ? "0.5" : "1";
+
+            function startEdit() {
+                const editInput = document.createElement("input");
+                editInput.classList.add("todo-edit-input");
+                editInput.value = todo.title;
+                editInput.style.fontSize = "16px";
+                editInput.style.flex = "1";        // stay inside space
+                editInput.style.minWidth = "0";    // prevent overflow
+                editInput.style.width = "100%";    // fill available area
+                editInput.style.boxSizing = "border-box";
+                editInput.style.marginRight = "10px";  // spacing before icons
+
+                editInput.onkeydown = (e) => {
+                    if (e.key === "Enter") {
+                        todos[index].title = editInput.value.trim();
+                        saveTodos();
+                        render();
+                    }
+                    if (e.key === "Escape") {
+                        render(); // cancel editing
+                    }
+                };
+
+                editInput.onblur = () => {
+                    const newValue = editInput.value.trim();
+                    if (newValue === "") {
+                        render(); // cancel edit if empty
+                        return;
+                    }
+                    todos[index].title = newValue;
+                    saveTodos();
+                    render();
+                };
+
+                div.replaceChild(editInput, h4);
+                editInput.focus();
+            }
+
+            // EDIT BUTTON
+            const editBtn = document.createElement("button");
+            editBtn.innerHTML = `
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="turquoise" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+            `;
+            editBtn.classList.add("edit-btn"); // same styling
+            editBtn.onclick = () => startEdit();
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerHTML = `
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="turquoise" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M6 6l1.5 14h9L18 6" />
+                <path d="M10 11l4 4" />
+                <path d="M14 11l-4 4" />
+            </svg>
+            `;
+            deleteBtn.classList.add("delete-btn");
+            deleteBtn.onclick = () => deleteTodo(index);
+
+            div.append(checkbox);
+            div.append(h4);
+            div.append(editBtn);
+            div.append(deleteBtn);
+
+            return div
+        }
+
+        function updateCount() {
+            const remaining = todos.filter(t => !t.completed).length;
+            const completed = todos.filter(t => t.completed).length;
+
+            // NEW: counts beside section titles
+            document.getElementById("remainingTitleCount").textContent = `${remaining}`;
+            document.getElementById("completedTitleCount").textContent = `${completed}`;
+        }
+
+        function searchTasks() {
+            const query = document.getElementById("searchInput").value.toLowerCase();
+            const allTasks = document.querySelectorAll("#remainingTasks > div, #completedTasks > div");
+
+            allTasks.forEach(task => {
+                const text = task.querySelector("h4").textContent.toLowerCase();
+                task.style.display = text.includes(query) ? "flex" : "none";
+            });
+        }
+        function clearSearch() {
+            document.getElementById("searchInput").value = "";
+            searchTasks(); // re-show all tasks
+        }
+
+        function toggleSearch() {
+            let overlay = document.getElementById("searchOverlay");
+            if (overlay.style.display === "flex") {
+                closeSearch();
+            } else {
+                overlay.style.display = "flex";
+                document.getElementById("searchInput").focus();
+            }
+        }
+
+        function closeSearch() {
+            let overlay = document.getElementById("searchOverlay");
+            overlay.style.display = "none";
+            clearSearch();
+        }
+
+let draggedIdGlobal = null;
+
+function dragStart(e) {
+    closeSearch(); 
+    draggedIdGlobal = Number(this.dataset.id); // IMPORTANT FIX
+    this.style.opacity = "0.3";
+
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", draggedIdGlobal);
+    }
+}
+
+function dragOver(e) {
+    e.preventDefault();
+    this.style.background = "rgba(64, 224, 208, 0.15)";
+    this.style.borderRadius = "8px";
+}
+
+function dropItem(e) {
+    e.preventDefault();
+
+    let draggedId = draggedIdGlobal;
+    const targetId = Number(this.dataset.id);
+
+    const oldIndex = todos.findIndex(t => t.id === draggedId);
+    const newIndex = todos.findIndex(t => t.id === targetId);
+
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+    const [item] = todos.splice(oldIndex, 1);
+    todos.splice(newIndex, 0, item);
+
+    saveTodos();
+    render();
+
+    draggedIdGlobal = null;
+}
+
+function dragEnd(e) {
+    this.style.opacity = "1";
+    this.style.background = "none";
+    draggedIdGlobal = null;
+}
+
+
+function render() {
+    const remainingBox = document.querySelector("#remainingTasks");
+    const completedBox = document.querySelector("#completedTasks");
+
+    // clear both containers first
+    remainingBox.innerHTML = "";
+    completedBox.innerHTML = "";
+
+    // Render from the single source-of-truth: todos
+    todos.forEach((todo, index) => {
+        const element = createTodoComponent(todo, index);
+        element.dataset.index = index; // ensure updated index after reorder
+
+        // If a duplicate element somehow exists in DOM with same id, remove it first
+        const existing = document.getElementById(element.id);
+        if (existing) existing.remove();
+
+        if (todo.completed) {
+            completedBox.appendChild(element);
+        } else {
+            remainingBox.appendChild(element);
+        }
+    });
+
+    updateCount();
+}
+        document.getElementById("todoInput").addEventListener("keydown", function (event) {
+    // Prevent Enter from adding the task
+    if (event.key === "Enter") {
+        event.stopPropagation();
+    }
+});
+    </script>
+</body>
+
+</html>
