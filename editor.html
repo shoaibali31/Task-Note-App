@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Edit Note</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #40E0D0;
+            --bg: #000;
+            --muted: #bfc7cc
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            padding: 18px;
+            padding-bottom: 100px
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            justify-content: flex-start;
+        }
+
+        .back {
+            background: none;
+            border: 1px solid #222;
+            color: var(--accent);
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer
+        }
+
+        .title-input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #222;
+            background: #070707;
+            color: #ddd;
+            min-width: 0;
+        }
+
+        .meta {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .editor-wrapper {
+            position: relative;
+            margin-top: 8px
+        }
+
+        textarea.todo-edit-input {
+            width: 100%;
+            min-height: 550px;
+            padding: 14px;
+            border-radius: 14px;
+            border: 2px solid #222;
+            background: #070707;
+            color: #fff;
+            resize: vertical;
+            box-sizing: border-box;
+            line-height: 1.4;
+            font-size: 15px;
+            padding-right: 64px
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 10px
+        }
+
+        .color-swatch {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 2px solid #222;
+            cursor: pointer
+        }
+
+        .small-btn {
+            background: none;
+            border: 1px solid #222;
+            padding: 8px 10px;
+            border-radius: 10px;
+            color: var(--accent);
+            cursor: pointer
+        }
+
+        .muted {
+            color: var(--muted)
+        }
+
+        .autosave {
+            font-size: 13px;
+            color: var(--muted);
+            margin-left: 8px
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 18px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6));
+            box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.6)
+        }
+
+        .menu-wrapper {
+            position: relative;
+        }
+
+        .menu-btn {
+            background: #111;
+            color: #40E0D0;
+            border: 1px solid #222;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background: #0b0b0b;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 6px 0;
+            width: 180px;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            animation: fadeIn 0.15s ease;
+        }
+
+        .menu-dropdown button {
+            background: none;
+            border: none;
+            color: #fff;
+            text-align: left;
+            padding: 12px 16px;
+            width: 100%;
+            font-size: 15px;
+        }
+
+        .menu-dropdown button:hover {
+            background: rgba(64, 224, 208, 0.15);
+        }
+
+        .menu-dropdown .danger {
+            color: #ff6b6b;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top">
+        <button id="backBtn" class="back">← Back</button>
+
+        <input id="noteTitle" class="title-input" placeholder="Title (first line used if empty)" />
+
+        <!-- 3-dot menu button -->
+        <div class="menu-wrapper">
+            <button id="menuBtn" class="menu-btn">⋮</button>
+
+            <!-- dropdown -->
+            <div id="menuDropdown" class="menu-dropdown">
+                <button id="pinMenu">Pin</button>
+                <button id="lockMenu">Lock</button>
+                <button id="duplicateMenu">Duplicate</button>
+                <button id="exportMenu">Export</button>
+                <button id="deleteMenu" class="danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="editor-wrapper">
+        <textarea id="noteContent" class="todo-edit-input" placeholder="Start writing your note..."></textarea>
+    </div>
+
+    <div class="controls-row">
+        <div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Color</div>
+            <input id="colorInput" type="color" value="#FFD875"
+                style="width:54px;height:40px;border-radius:8px;border:0;cursor:pointer" />
+        </div>
+        <div style="flex:1"></div>
+        <div class="muted">Autosave: <span id="autoState">idle</span></div>
+    </div>
+
+    <div style="height:84px;"></div>
+
+    <script>
+        const menuBtn = document.getElementById("menuBtn");
+        const menuDropdown = document.getElementById("menuDropdown");
+
+        menuBtn && (menuBtn.onclick = () => {
+            if (!menuDropdown) return;
+            menuDropdown.style.display =
+                menuDropdown.style.display === "flex" ? "none" : "flex";
+        });
+
+        // Close menu on outside click
+        document.addEventListener("click", (e) => {
+            if (!menuBtn || !menuDropdown) return;
+            if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+                menuDropdown.style.display = "none";
+            }
+        });
+
+        /* Storage + crypto helpers (same as notepad.html) */
+        const STORAGE_KEY = 'notes_v1';
+        function loadNotes() { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+        function saveNotes(notes) { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
+
+        function bytesToHex(bytes) { return Array.from(new Uint8Array(bytes)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+        function hexToBytes(hex) { const arr = new Uint8Array(hex.length / 2); for (let i = 0; i < hex.length; i += 2) arr[i / 2] = parseInt(hex.substr(i, 2), 16); return arr; }
+        function bufToBase64(buf) { // robust ArrayBuffer -> base64
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary);
+        }
+        function base64ToBuf(b64) { const bin = atob(b64); const len = bin.length; const buf = new Uint8Array(len); for (let i = 0; i < len; i++) buf[i] = bin.charCodeAt(i); return buf.buffer; }
+
+        async function deriveKey(password, saltHex) {
+            const enc = new TextEncoder();
+            const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+            const salt = hexToBytes(saltHex);
+            return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, pwKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        }
+
+        async function encryptStringWithPassword(plainStr, password) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const saltHex = bytesToHex(salt); const ivHex = bytesToHex(iv);
+            const key = await deriveKey(password, saltHex);
+            const enc = new TextEncoder();
+            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plainStr));
+            return { encryptedBase64: bufToBase64(encrypted), saltHex, ivHex };
+        }
+        async function decryptStringWithPassword(encryptedBase64, saltHex, ivHex, password) {
+            const key = await deriveKey(password, saltHex);
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(ivHex) }, key, base64ToBuf(encryptedBase64));
+            return new TextDecoder().decode(decrypted);
+        }
+
+        /* page params */
+        const params = new URLSearchParams(location.search);
+        const id = params.get('id') ? Number(params.get('id')) : null;
+        const pwParam = params.get('pw') ? decodeURIComponent(params.get('pw')) : null;
+
+        // in-memory session password (never written to localStorage)
+        let sessionPassword = pwParam || null;
+
+        let notes = loadNotes();
+        let note = id ? notes.find(n => n.id === id) : null;
+        if (!note) {
+            note = { id: Date.now(), title: '', content: '', color: '#FFD875', pinned: false, modified: Date.now(), encrypted: false };
+            notes.unshift(note);
+            saveNotes(notes);
+        }
+
+        /* UI refs (use fallbacks for menu items vs legacy ids) */
+        const titleEl = document.getElementById('noteTitle');
+        const contentEl = document.getElementById('noteContent');
+        const colorInput = document.getElementById('colorInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const backBtn = document.getElementById('backBtn');
+
+        // dropdown uses 'pinMenu', 'lockMenu', etc. use them first then legacy ids
+        const pinBtn = document.getElementById('pinMenu') || document.getElementById('pinBtn');
+        const lockBtn = document.getElementById('lockMenu') || document.getElementById('lockBtn');
+        const duplicateBtn = document.getElementById('duplicateMenu') || document.getElementById('duplicateBtn');
+        const exportBtn = document.getElementById('exportMenu') || document.getElementById('exportBtn');
+        const deleteBtn = document.getElementById('deleteMenu') || document.getElementById('deleteBtn');
+
+        const autoState = document.getElementById('autoState');
+
+        // Small helper to safely add listeners only when element exists
+        function safeAddListener(el, event, fn) {
+            if (!el) return;
+            el.addEventListener(event, fn);
+        }
+
+        /* fill UI (handle encrypted note: attempt to decrypt if pw param present) */
+        async function populate() {
+            // if any of the UI fields are missing, bail gracefully
+            if (!titleEl || !contentEl || !colorInput) return;
+
+            if (note.encrypted) {
+                // Attempt decryption with pwParam if present, else prompt the user.
+                if (pwParam) {
+                    try {
+                        const json = await decryptStringWithPassword(note.encryptedData, note.salt, note.iv, pwParam);
+                        const obj = JSON.parse(json);
+                        titleEl.value = obj.title || '';
+                        contentEl.value = obj.content || '';
+                        colorInput.value = note.color || '#FFD875';
+                        // store password only in memory so saves are possible during this session
+                        sessionPassword = pwParam;
+                    } catch (e) {
+                        alert('Failed to decrypt with provided password.');
+                        titleEl.value = ''; contentEl.value = '';
+                    }
+                } else {
+                    // ask user for password to *unlock for editing* (but do NOT permanently remove encrypted data)
+                    const pass = prompt('This note is locked. Enter password to unlock for editing:');
+                    if (pass) {
+                        try {
+                            const json = await decryptStringWithPassword(note.encryptedData, note.salt, note.iv, pass);
+                            const obj = JSON.parse(json);
+                            titleEl.value = obj.title || '';
+                            contentEl.value = obj.content || '';
+                            colorInput.value = note.color || '#FFD875';
+                            // store password only in memory so saves are possible during this session
+                            sessionPassword = pass;
+                        } catch (e) {
+                            alert('Incorrect password. You can still go back.');
+                            titleEl.value = ''; contentEl.value = '';
+                        }
+                    } else {
+                        titleEl.value = ''; contentEl.value = '';
+                    }
+                }
+                // do NOT flip note.encrypted -> false here. Keep encrypted blob intact.
+                if (lockBtn) lockBtn.textContent = 'Unlock';
+            } else {
+                titleEl.value = note.title || '';
+                contentEl.value = note.content || '';
+                colorInput.value = note.color || '#FFD875';
+                if (lockBtn) lockBtn.textContent = 'Lock';
+            }
+
+            if (pinBtn) pinBtn.textContent = note.pinned ? 'Unpin' : 'Pin';
+            // autosize
+            setTimeout(() => { if (contentEl) { contentEl.style.height = 'auto'; contentEl.style.height = contentEl.scrollHeight + 'px'; } }, 40);
+        }
+        populate();
+
+        /* save helpers */
+        let saveTimeout = null;
+        async function commitSave() {
+            if (!autoState && typeof autoState === 'undefined') { }
+
+            if (note.encrypted) {
+                // Use the in-memory session password if present (allows save after prompt-unlock)
+                const pw = sessionPassword || null;
+                if (!pw) {
+                    alert('This note is locked — unlock with password to save changes.');
+                    return;
+                }
+
+                const payload = JSON.stringify({ title: titleEl.value.trim(), content: contentEl.value });
+                try {
+                    const { encryptedBase64, saltHex, ivHex } = await encryptStringWithPassword(payload, pw);
+                    note.encryptedData = encryptedBase64;
+                    note.salt = saltHex;
+                    note.iv = ivHex;
+                    note.color = colorInput.value;
+                    note.modified = Date.now();
+                    // Keep note.encrypted = true (it stays encrypted at rest)
+                    const idx = notes.findIndex(n => n.id === note.id);
+                    if (idx >= 0) notes[idx] = note; else notes.unshift(note);
+                    saveNotes(notes);
+                    if (autoState) autoState.textContent = 'saved';
+                    setTimeout(() => { if (autoState && autoState.textContent === 'saved') autoState.textContent = 'idle'; }, 800);
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to save encrypted note');
+                }
+                return;
+            }
+
+            // plaintext save
+            note.title = titleEl.value.trim();
+            note.content = contentEl.value;
+            note.color = colorInput.value;
+            note.modified = Date.now();
+            const idx = notes.findIndex(n => n.id === note.id);
+            if (idx >= 0) notes[idx] = note; else notes.unshift(note);
+            saveNotes(notes);
+            if (autoState) autoState.textContent = 'saved';
+            setTimeout(() => { if (autoState && autoState.textContent === 'saved') autoState.textContent = 'idle'; }, 800);
+        }
+
+        function scheduleSave() {
+            if (autoState) autoState.textContent = 'typing...';
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => { commitSave(); }, 1200);
+        }
+
+        /* interactions */
+        // guard before adding listeners
+        if (contentEl) {
+            contentEl.addEventListener('input', () => {
+                contentEl.style.height = 'auto';
+                contentEl.style.height = contentEl.scrollHeight + 'px';
+                scheduleSave();
+            });
+        }
+        if (titleEl) titleEl.addEventListener('input', scheduleSave);
+        if (colorInput) colorInput.addEventListener('input', scheduleSave);
+
+        safeAddListener(saveBtn, 'click', () => {
+            commitSave();
+            if (saveBtn) { saveBtn.style.transform = 'scale(.96)'; setTimeout(() => saveBtn.style.transform = '', 120); }
+        });
+
+        if (contentEl) contentEl.onkeydown = (e) => {
+            if (e.key === 'Enter') { e.stopPropagation(); return; } // newline allowed
+            if (e.key === 'Escape') { goBack(); }
+        };
+
+        if (backBtn) backBtn.onclick = goBack;
+
+function goBack() {
+    commitSave();
+
+    // If inside split.html iframe, send message to parent
+    if (window !== window.parent) {
+        window.parent.postMessage({ action: "openNotes" }, "*");
+        return;
+    }
+
+    // Fallback when opened directly (no iframe)
+    window.location.href = "notepad.html";
+}
+
+        // safe delete handler (dropdown uses deleteMenu)
+        safeAddListener(deleteBtn, 'click', () => {
+            if (confirm('Delete this note?')) {
+                notes = notes.filter(n => n.id !== note.id);
+                saveNotes(notes);
+                window.parent.postMessage({ action: "deleteAndReturn" }, "*");
+            }
+        });
+
+        // duplicate
+        safeAddListener(duplicateBtn, 'click', () => {
+            // Create a copy that preserves encryption state.
+            const copy = {
+                ...note,
+                id: Date.now(),
+                modified: Date.now(),
+                // make the title explicit to indicate a duplicate
+                title: (note.title ? note.title + ' (copy)' : 'Copy'),
+            };
+            // If note was encrypted, keep encryptedData, salt, iv as-is so it remains a locked copy.
+            // If you prefer an independent encrypted copy (different salt/iv), ask for password and re-encrypt (see option B/C).
+            notes.unshift(copy);
+            saveNotes(notes);
+            window.parent.postMessage({ action: "duplicateAndReturn" }, "*");
+        });
+
+        // pin toggle
+        safeAddListener(pinBtn, 'click', () => {
+            note.pinned = !note.pinned;
+            commitSave();
+            if (pinBtn && typeof pinBtn.textContent !== 'undefined') pinBtn.textContent = note.pinned ? 'Unpin' : 'Pin';
+        });
+
+        // export (map to exportAsTxt by default)
+        safeAddListener(exportBtn, 'click', () => {
+            exportAsTxt();
+        });
+
+        // lock/unlock
+safeAddListener(lockBtn, 'click', async () => {
+
+    /* ============================================================
+       UNLOCK (encrypted → user wants to edit)
+    ============================================================ */
+    if (note.encrypted) {
+        const pass = prompt('Enter password to unlock this note for editing:');
+        if (!pass) return;
+
+        try {
+            const json = await decryptStringWithPassword(
+                note.encryptedData, note.salt, note.iv, pass
+            );
+            const obj = JSON.parse(json);
+
+            titleEl.value = obj.title;
+            contentEl.value = obj.content;
+            colorInput.value = note.color || '#FFD875';
+
+            sessionPassword = pass;
+            lockBtn.textContent = "Unlock";
+            alert('Note unlocked for editing. It will remain encrypted when saved.');
+        } catch {
+            alert('Incorrect password.');
+        }
+        return;
+    }
+
+
+    /* ============================================================
+       LOCK (plaintext → encrypt now)
+    ============================================================ */
+    const pass = prompt('Set a password to lock this note:');
+    if (!pass) return;
+
+    try {
+        const payload = JSON.stringify({
+            title: titleEl.value.trim(),
+            content: contentEl.value
+        });
+
+        const { encryptedBase64, saltHex, ivHex } =
+            await encryptStringWithPassword(payload, pass);
+
+        note.encrypted = true;
+        note.encryptedData = encryptedBase64;
+        note.salt = saltHex;
+        note.iv = ivHex;
+
+        // keep color + metadata
+        note.color = colorInput.value;
+        note.modified = Date.now();
+
+        const idx = notes.findIndex(n => n.id === note.id);
+        notes[idx] = note;
+        saveNotes(notes);
+
+        sessionPassword = null;
+        alert('Note locked.');
+        location.reload();
+
+} catch (err) {
+    console.error("LOCK ERROR:", err);
+    alert("Failed to lock note:\n" + err.message);
+}
+});
+
+        /* onblur autosave */
+        if (contentEl) contentEl.onblur = () => { setTimeout(() => { if (document.activeElement !== saveBtn) commitSave(); }, 50); }
+        if (titleEl) titleEl.onblur = () => { setTimeout(() => { if (document.activeElement !== saveBtn) commitSave(); }, 50); }
+        if (colorInput) colorInput.onblur = () => { setTimeout(() => { if (document.activeElement !== saveBtn) commitSave(); }, 50); }
+
+        /* export helpers (same approach as notepad) */
+        function exportAsTxt() {
+            const t = note.encrypted ? 'Encrypted — unlock to view.' : ((note.title || (titleEl && titleEl.value)) + '\n\n' + (note.content || (contentEl && contentEl.value)));
+            const blob = new Blob([t], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = ((note.title || (titleEl && titleEl.value) || 'note') + '.txt');
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        }
+        function exportAsImage() {
+            const title = note.title || (titleEl && titleEl.value) || '';
+            const content = note.encrypted ? 'Encrypted — unlock to view.' : (note.content || (contentEl && contentEl.value) || '');
+            const width = 800; const lineHeight = 28; const titleHeight = title ? 60 : 0;
+            const lines = (title + '\n' + content).split('\n');
+            const height = Math.min(2000, Math.max(300, titleHeight + lines.length * lineHeight + 80));
+            const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d'); ctx.fillStyle = note.color || (colorInput && colorInput.value) || '#FFD875'; ctx.fillRect(0, 0, width, height);
+            const pad = 40; ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+            ctx.font = 'bold 28px Poppins, sans-serif'; if (title) wrapText(ctx, title, pad, pad, width - pad * 2, 28);
+            ctx.font = '16px Poppins, sans-serif'; wrapText(ctx, content, pad, pad + (title ? 60 : 0), width - pad * 2, 22);
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = (note.title || 'note') + '.png';
+                document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = (text || '').split(' ');
+            let line = '';
+            let curY = y;
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0) {
+                    ctx.fillText(line, x, curY); line = words[n] + ' '; curY += lineHeight;
+                } else { line = testLine; }
+            }
+            ctx.fillText(line, x, curY);
+        }
+
+        /* quick UI shortcuts for share/export */
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); commitSave(); alert('Saved'); }
+            if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportAsTxt(); }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            sessionPassword = null;
+        });
+
+        /* initial autosave state */
+        if (autoState) autoState.textContent = 'idle';
+    </script>
+</body>
+
+</html>

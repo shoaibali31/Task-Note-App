@@ -1,23 +1,41 @@
-const CACHE_NAME = "todo-cache-v3";
-const RUNTIME_CACHE = "runtime-cache-v3";
+/* FIXED & IMPROVED SERVICE WORKER */
 
+const CACHE_NAME = "todo-cache-v5";
+const RUNTIME_CACHE = "runtime-cache-v5";
+
+/* Explicit local assets — do NOT use "./" */
 const PRECACHE_ASSETS = [
-    "./",
-    "./index-mobile.html",
-    "./offline.html",
-    "./manifest.json",
-    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css",
-    "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap",
-    "https://i.postimg.cc/rs5C8Hs9/todolisticon.png"
+    "/index-mobile.html",
+    "/notepad.html",
+    "/editor.html",
+    "/split.html",
+    "/offline.html",
+    "/manifest.json",
+    "https://i.postimg.cc/rs5C8Hs9/todolisticon.png",
+    // Optional: add local icons if you have them
+    // "/icons/icon-192.png",
+    // "/icons/icon-512.png"
 ];
 
+/* INSTALL — safe precache (avoid failing on external fonts) */
 self.addEventListener("install", event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_ASSETS))
+        caches.open(CACHE_NAME).then(async cache => {
+            for (const url of PRECACHE_ASSETS) {
+                try {
+                    const res = await fetch(url, { cache: "reload" });
+                    if (res.ok) cache.put(url, res.clone());
+                } catch (err) {
+                    console.warn("Precache failed for:", url, err);
+                }
+            }
+        })
     );
+
     self.skipWaiting();
 });
 
+/* ACTIVATE — remove older caches */
 self.addEventListener("activate", event => {
     event.waitUntil(
         caches.keys().then(keys =>
@@ -27,35 +45,41 @@ self.addEventListener("activate", event => {
             )
         )
     );
+
     self.clients.claim();
 });
 
+/* FETCH HANDLER WITH FIXED LOGIC */
 self.addEventListener("fetch", event => {
     const req = event.request;
     const url = new URL(req.url);
 
+    // GOOGLE FONTS: runtime cache only
     if (url.origin.includes("fonts.googleapis.com") ||
         url.origin.includes("fonts.gstatic.com")) {
         event.respondWith(cacheFirst(req));
         return;
     }
 
-    if (url.href.includes("cdnjs") || url.href.includes("postimg") ||
-        /\.(png|jpg|jpeg|gif|svg|webp)$/.test(url.pathname)) {
+    // CDN images/CSS
+    if (url.href.includes("cdnjs") ||
+        url.href.includes("postimg") ||
+        /\.(png|jpg|jpeg|gif|svg|webp|ico)$/.test(url.pathname)) {
         event.respondWith(cacheFirst(req));
         return;
     }
 
+    // HTML requests — networkFirst for updated UI
     if (req.headers.get("accept")?.includes("text/html")) {
         event.respondWith(networkFirst(req));
         return;
     }
 
+    // Everything else → cacheFirst
     event.respondWith(cacheFirst(req));
 });
 
-// -----------------
-
+/* STRATEGIES */
 async function networkFirst(req) {
     try {
         const fresh = await fetch(req);
@@ -63,8 +87,7 @@ async function networkFirst(req) {
         cache.put(req, fresh.clone());
         return fresh;
     } catch {
-        return caches.match(req) ||
-               caches.match("./offline.html");
+        return caches.match(req) || caches.match("/offline.html");
     }
 }
 
@@ -78,6 +101,6 @@ async function cacheFirst(req) {
         cache.put(req, fresh.clone());
         return fresh;
     } catch {
-        return caches.match("./offline.html");
+        return caches.match("/offline.html");
     }
 }

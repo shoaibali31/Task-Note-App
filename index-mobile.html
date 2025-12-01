@@ -3,7 +3,7 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo List</title>
+    <title>Task Note App</title>
 
     <link rel="manifest" href="manifest.json">
     <script>
@@ -33,6 +33,21 @@
             max-width: 100%;
         }
 
+        /* Hide internal floating elements when inside iframe */
+        body.in-iframe .top_container,
+        body.in-iframe .input_group,
+        body.in-iframe hr,
+        body.in-iframe #remainingSection,
+        body.in-iframe #completedSection {
+            padding-bottom: 90px;
+            /* space for bottom tabs */
+        }
+
+        body.in-iframe #undoBtn {
+            bottom: 120px;
+        }
+
+
         .top_container {
             display: flex;
             flex-direction: column;
@@ -41,7 +56,13 @@
         }
 
         .top_container h1 {
+            margin-top: 10px;
             margin-bottom: 10px;
+            align-self: flex-start !important;
+            text-align: left !important;
+            padding-left: 5px;
+            font-size: 25px;
+            color: #40E0D0;
         }
 
         .input_group {
@@ -49,7 +70,7 @@
             align-items: center;
             gap: 10px;
             padding: 5px 15px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             justify-content: center;
             width: 100%;
             margin-bottom: 20px;
@@ -71,7 +92,7 @@
             color: #40E0D0;
             border: none;
             font-size: 16px;
-            padding: 6px 10px;
+            padding: 0px 10px 0px 0px;
         }
 
         .simple-btn:hover {
@@ -182,6 +203,25 @@
             border-radius: 8px;
             box-sizing: border-box;
             flex-wrap: nowrap;
+            transition: transform 180ms ease,
+                background 180ms ease,
+                opacity 180ms ease;
+        }
+
+        /* Lift & glow when dragging */
+        .dragging {
+            opacity: 0.5 !important;
+            transform: scale(1.03);
+            background: rgba(64, 224, 208, 0.15);
+            border-radius: 10px;
+            transition: transform 150ms ease, opacity 150ms ease;
+        }
+
+        /* Highlight drop target */
+        .drag-over {
+            background: rgba(64, 224, 208, 0.25) !important;
+            transform: scale(1.02);
+            border-radius: 10px;
         }
 
         .delete-btn,
@@ -289,12 +329,44 @@
             border-color: #5ff5e5;
             box-shadow: 0 0 10px #40E0D0;
         }
+
+        .input_group textarea {
+            flex: 1;
+            /* makes input narrower */
+        }
+
+        .edit-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .save-inside-btn {
+            position: absolute;
+            bottom: 11px;
+            right: 4px;
+            background: #40E0D0;
+            border: none;
+            color: black;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 6px #40E0D0;
+        }
+
+        .save-inside-btn:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 
 <body>
     <div class="top_container">
-        <h1>TASKS</h1>
+        <h1>Task Note</h1>
 
         <div class="search_icon" onclick="toggleSearch()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#40E0D0" stroke-width="2"
@@ -317,18 +389,12 @@
 
 
         <div class="input_group">
-<textarea placeholder=" 
-         Enter your Task..."
-          id="todoInput"
-          rows="2"
-
-          style="
+            <textarea placeholder="Enter your Task..." id="todoInput" rows="2" style="
           display: flex;
-          border-radius: 12px;
+          border-radius: 15px;
           background: white;
           border: 2px solid white;
           resize: none;
-          padding: 0px 0px 0px 70px;
           ">
 </textarea>
             <button class="simple-btn" onclick="addTodo()">Add</button>
@@ -338,24 +404,24 @@
     <hr class="divider">
 
     <div id="remainingSection">
-<h4 style="color:white; display:flex; align-items:center; justify-content:space-between;">
-    <span>Tasks <span id="remainingTitleCount"></span></span>
+        <h4 style="color:white; display:flex; align-items:center; justify-content:space-between;">
+            <span>Tasks <span id="remainingTitleCount"></span></span>
 
-    <!-- Undo Button -->
-    <button id="undoBtn" onclick="undoDelete()" 
-        style="background:none; border:none; cursor:pointer; opacity:0.6; margin-right:5px; display:none;">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="34" height="34"
-     fill="none" stroke="#40E0D0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-     <g transform="translate(-15, 0)">
-  <path d="
+            <!-- Undo Button -->
+            <button id="undoBtn" onclick="undoDelete()"
+                style="background:none; border:none; cursor:pointer; opacity:0.6; margin-right:5px; display:none;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="34" height="34" fill="none"
+                    stroke="#40E0D0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+                    <g transform="translate(-15, 0)">
+                        <path d="
       M170 95
       C170 60, 170 60, 120 60
       H50
   " />
-  <polyline points="50,40 15,60 50,80" />
-</svg>
-    </button>
-</h4>
+                        <polyline points="50,40 15,60 50,80" />
+                </svg>
+            </button>
+        </h4>
 
         <div id="remainingTasks"></div>
     </div>
@@ -369,6 +435,7 @@
     <script>
         let todos = [];
         let lastDeleted = null;
+        let lastCleared = null;
 
         window.onload = function () {
             const savedTodos = localStorage.getItem("todos");
@@ -396,40 +463,65 @@
             }
         }
 
-function deleteTodo(index) {
-    lastDeleted = todos[index];   // save last deleted task
-    todos.splice(index, 1);
-    saveTodos();
-    render();
+        function deleteTodo(index) {
+            lastDeleted = todos[index];   // save last deleted task
+            todos.splice(index, 1);
+            saveTodos();
+            render();
 
-    // Show undo button
-    document.getElementById("undoBtn").style.display = "inline-block";
+            // Show undo button
+            document.getElementById("undoBtn").style.display = "inline-block";
 
-    // Auto-hide after 6 seconds
-    setTimeout(() => {
-        document.getElementById("undoBtn").style.display = "none";
-        lastDeleted = null;
-    }, 15000);
-}
+            // Auto-hide after 6 seconds
+            setTimeout(() => {
+                document.getElementById("undoBtn").style.display = "none";
+                lastDeleted = null;
+            }, 15000);
+        }
 
-function undoDelete() {
-    if (!lastDeleted) return;
+        function undoDelete() {
+            // Undo "Clear All"
+            if (lastCleared) {
+                todos = [...lastCleared];
+                lastCleared = null;
+                saveTodos();
+                render();
+                document.getElementById("undoBtn").style.display = "none";
+                return;
+            }
 
-    // Restore it at top
-    todos.unshift(lastDeleted);
-    lastDeleted = null;
-
-    saveTodos();
-    render();
-
-    // Hide undo button
-    document.getElementById("undoBtn").style.display = "none";
-}
+            // Undo single delete
+            if (lastDeleted) {
+                todos.unshift(lastDeleted);
+                lastDeleted = null;
+                saveTodos();
+                render();
+                document.getElementById("undoBtn").style.display = "none";
+                return;
+            }
+        }
 
         function clearTodos() {
+            if (todos.length === 0) return;
+
+            // Save full list for undo
+            lastCleared = [...todos];
+
+            // Clear everything
             todos = [];
             saveTodos();
             render();
+
+            // Show undo button
+            document.getElementById("undoBtn").style.display = "inline-block";
+
+            // Hide after 15 seconds
+            setTimeout(() => {
+                if (lastCleared !== null) {
+                    lastCleared = null;
+                    document.getElementById("undoBtn").style.display = "none";
+                }
+            }, 15000);
         }
 
         // This function toggles the completed state of a todo
@@ -485,39 +577,70 @@ function undoDelete() {
             h4.style.opacity = todo.completed ? "0.5" : "1";
 
             function startEdit() {
-                const editInput = document.createElement("input");
+                // Wrapper for textarea + button
+                const wrapper = document.createElement("div");
+                wrapper.className = "edit-wrapper";
+
+                // TEXTAREA
+                const editInput = document.createElement("textarea");
                 editInput.classList.add("todo-edit-input");
                 editInput.value = todo.title;
-                editInput.style.fontSize = "16px";
-                editInput.style.flex = "1";        // stay inside space
-                editInput.style.minWidth = "0";    // prevent overflow
-                editInput.style.width = "100%";    // fill available area
+                editInput.style.width = "100%";
+                editInput.style.minHeight = "60px";
+                editInput.style.paddingRight = "45px"; // space for save button
                 editInput.style.boxSizing = "border-box";
-                editInput.style.marginRight = "10px";  // spacing before icons
+                editInput.style.whiteSpace = "pre-wrap";
 
+                // Auto expand height
+                editInput.oninput = () => {
+                    editInput.style.height = "auto";
+                    editInput.style.height = editInput.scrollHeight + "px";
+                };
+                editInput.oninput();
+
+                // ENTER = newline
                 editInput.onkeydown = (e) => {
                     if (e.key === "Enter") {
-                        todos[index].title = editInput.value.trim();
-                        saveTodos();
-                        render();
+                        e.stopPropagation();
+                        return; // allow newline
                     }
                     if (e.key === "Escape") {
-                        render(); // cancel editing
+                        render();
                     }
                 };
 
-                editInput.onblur = () => {
-                    const newValue = editInput.value.trim();
-                    if (newValue === "") {
-                        render(); // cancel edit if empty
-                        return;
-                    }
-                    todos[index].title = newValue;
+                // SAVE BUTTON
+                const saveBtn = document.createElement("button");
+                saveBtn.className = "save-inside-btn";
+                saveBtn.innerHTML = "✔";
+
+                // Save function used by button + blur
+                const saveEdit = () => {
+                    todos[index].title = editInput.value.trim();
                     saveTodos();
                     render();
                 };
 
-                div.replaceChild(editInput, h4);
+                // Save on button click
+                saveBtn.onclick = () => {
+                    saveEdit();
+                };
+
+                // Save when clicking elsewhere
+                editInput.onblur = () => {
+                    // Prevent saving when button is clicked (button steals focus)
+                    setTimeout(() => {
+                        if (document.activeElement !== saveBtn) {
+                            saveEdit();
+                        }
+                    }, 50);
+                };
+
+                wrapper.appendChild(editInput);
+                wrapper.appendChild(saveBtn);
+
+                div.replaceChild(wrapper, h4);
+
                 editInput.focus();
             }
 
@@ -592,84 +715,84 @@ function undoDelete() {
             clearSearch();
         }
 
-let draggedIdGlobal = null;
+        let draggedIdGlobal = null;
 
-function dragStart(e) {
-    closeSearch(); 
-    draggedIdGlobal = Number(this.dataset.id); // IMPORTANT FIX
-    this.style.opacity = "0.3";
+        function dragStart(e) {
+            closeSearch();
+            draggedIdGlobal = Number(this.dataset.id);
+            this.classList.add("dragging");
 
-    if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", draggedIdGlobal);
-    }
-}
-
-function dragOver(e) {
-    e.preventDefault();
-    this.style.background = "rgba(64, 224, 208, 0.15)";
-    this.style.borderRadius = "8px";
-}
-
-function dropItem(e) {
-    e.preventDefault();
-
-    let draggedId = draggedIdGlobal;
-    const targetId = Number(this.dataset.id);
-
-    const oldIndex = todos.findIndex(t => t.id === draggedId);
-    const newIndex = todos.findIndex(t => t.id === targetId);
-
-    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-    const [item] = todos.splice(oldIndex, 1);
-    todos.splice(newIndex, 0, item);
-
-    saveTodos();
-    render();
-
-    draggedIdGlobal = null;
-}
-
-function dragEnd(e) {
-    this.style.opacity = "1";
-    this.style.background = "none";
-    draggedIdGlobal = null;
-}
-
-
-function render() {
-    const remainingBox = document.querySelector("#remainingTasks");
-    const completedBox = document.querySelector("#completedTasks");
-
-    // clear both containers first
-    remainingBox.innerHTML = "";
-    completedBox.innerHTML = "";
-
-    // Render from the single source-of-truth: todos
-    todos.forEach((todo, index) => {
-        const element = createTodoComponent(todo, index);
-        element.dataset.index = index; // ensure updated index after reorder
-
-        // If a duplicate element somehow exists in DOM with same id, remove it first
-        const existing = document.getElementById(element.id);
-        if (existing) existing.remove();
-
-        if (todo.completed) {
-            completedBox.appendChild(element);
-        } else {
-            remainingBox.appendChild(element);
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", draggedIdGlobal);
+            }
         }
-    });
 
-    updateCount();
-}
+        function dragOver(e) {
+            e.preventDefault();
+            this.classList.add("drag-over");
+        }
+
+        function dropItem(e) {
+            e.preventDefault();
+            this.classList.remove("drag-over");
+
+            let draggedId = draggedIdGlobal;
+            const targetId = Number(this.dataset.id);
+
+            const oldIndex = todos.findIndex(t => t.id === draggedId);
+            const newIndex = todos.findIndex(t => t.id === targetId);
+
+            if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+            const [item] = todos.splice(oldIndex, 1);
+            todos.splice(newIndex, 0, item);
+
+            saveTodos();
+            render();
+
+            draggedIdGlobal = null;
+        }
+
+        function dragEnd() {
+            this.classList.remove("dragging");
+            const all = document.querySelectorAll(".drag-over");
+            all.forEach(el => el.classList.remove("drag-over"));
+        }
+
+
+        function render() {
+            const remainingBox = document.querySelector("#remainingTasks");
+            const completedBox = document.querySelector("#completedTasks");
+
+            // clear both containers first
+            remainingBox.innerHTML = "";
+            completedBox.innerHTML = "";
+
+            // Render from the single source-of-truth: todos
+            todos.forEach((todo, index) => {
+                const element = createTodoComponent(todo, index);
+                element.dataset.index = index; // ensure updated index after reorder
+
+                // If a duplicate element somehow exists in DOM with same id, remove it first
+                const existing = document.getElementById(element.id);
+                if (existing) existing.remove();
+
+                if (todo.completed) {
+                    completedBox.appendChild(element);
+                } else {
+                    remainingBox.appendChild(element);
+                }
+            });
+
+            updateCount();
+        }
         document.getElementById("todoInput").addEventListener("keydown", function (event) {
-    // Prevent Enter from adding the task
-    if (event.key === "Enter") {
-        event.stopPropagation();
-    }
-});
+            // Prevent Enter from adding the task
+            if (event.key === "Enter") {
+                event.stopPropagation();
+            }
+        });
     </script>
 </body>
 
