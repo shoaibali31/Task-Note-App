@@ -11,11 +11,8 @@ const PRECACHE_ASSETS = [
     "/split.html",
     "/offline.html",
     "/manifest.json",
-    "/icons/Tasknote192.png",
-    "/icons/tasknote512.png",
-    // Optional: add local icons if you have them
-    // "/icons/icon-192.png",
-    // "/icons/icon-512.png"
+    "icons/Tasknote192.png",
+    "icons/Tasknote512.png",
 ];
 
 /* INSTALL — safe precache (avoid failing on external fonts) */
