@@ -6,8 +6,7 @@ It works on mobile and desktop, supports encryption, syncing through local brows
 🚀 Features:
 
 🛠️ Installation & Setup
-📥 Clone the repository: 
-Git Pages: https://shoaibali31.github.io/Task-Note-App/
+📥 Git Pages: https://shoaibali31.github.io/Task-Note-App/
 📱 Enable PWA features
 Open in browser → Add to Home Screen
 Works offline after first visit.
