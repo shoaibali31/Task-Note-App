@@ -1,6 +1,6 @@
 {
-    "name": "Todo List",
-    "short_name": "Todo",
+    "name": "Task Note",
+    "short_name": "Tasks",
     "start_url": "./index-mobile.html",
     "display": "standalone",
     "background_color": "#000000",
@@ -8,8 +8,13 @@
     "offline_enabled": true,
     "icons": [
         {
-            "src": "https://i.postimg.cc/rs5C8Hs9/todolisticon.png",
+            "src": "icons/Tasknote192.png",
             "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/tasknote512.png",
+            "sizes": "512x512",
             "type": "image/png"
         }
     ]

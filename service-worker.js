@@ -11,7 +11,8 @@ const PRECACHE_ASSETS = [
     "/split.html",
     "/offline.html",
     "/manifest.json",
-    "https://i.postimg.cc/rs5C8Hs9/todolisticon.png",
+    "/icons/Tasknote192.png",
+    "/icons/tasknote512.png",
     // Optional: add local icons if you have them
     // "/icons/icon-192.png",
     // "/icons/icon-512.png"
